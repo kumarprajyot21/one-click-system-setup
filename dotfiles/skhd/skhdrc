@@ -59,7 +59,8 @@ alt + cmd - e : yabai -m window --toggle split
 alt + cmd - return : open -na /Applications/Ghostty.app
 alt + cmd - b : open -na "/Applications/Firefox.app"
 alt + cmd - c : open -na "/Applications/Google Chrome.app"
-alt + cmd - f : open -na /Applications/Finder.app
+alt + cmd - z : open -na "/Applications/zoom.us.app"
+alt + cmd - s : open -na "/Applications/Slack.app"
 
 # Restart yabai
 alt + cmd + ctrl - r : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
