@@ -16,8 +16,8 @@ else
     ensure_dir "$REPO_ROOT/dotfiles/git"
     cat > "$REPO_ROOT/dotfiles/git/.gitconfig" << 'EOF'
 [user]
-    name = Your Name
-    email = your.email@example.com
+    name = Prajyot Kumar Garabadu
+    email = prajyot@petasense.com
 
 [core]
     editor = nvim

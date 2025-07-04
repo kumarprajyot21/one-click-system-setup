@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# User scripts installation module
+# User scripts setup for macOS
 
 set -euo pipefail
 
@@ -8,75 +8,55 @@ source "$(dirname "$0")/../../scripts/utils.sh"
 
 log "Setting up user scripts..."
 
-# Create scripts directory if it doesn't exist
+# Create scripts directory
 ensure_dir "$HOME/scripts"
 
-# Link utility scripts to ~/scripts
-log "Linking user scripts..."
+# Monitor layout switcher - replaced with macOS native display preferences
+# Note: macOS users can use System Preferences > Displays or third-party tools like DisplayMenu
 
-# Monitor layout switcher (for Hyprland)
-if [[ -f "$REPO_ROOT/dotfiles/scripts/switch_layout.sh" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/scripts/switch_layout.sh" "$HOME/scripts/switch_layout.sh"
-    chmod +x "$HOME/scripts/switch_layout.sh"
-fi
-
-# Zoxide + Neovim file finder
+# Zoxide + Neovim integration script
 if [[ -f "$REPO_ROOT/dotfiles/scripts/zoxide_openfiles_nvim.sh" ]]; then
     link_dotfile "$REPO_ROOT/dotfiles/scripts/zoxide_openfiles_nvim.sh" "$HOME/scripts/zoxide_openfiles_nvim.sh"
     chmod +x "$HOME/scripts/zoxide_openfiles_nvim.sh"
 fi
 
-# Hyprland tmux window killer
-if [[ -f "$REPO_ROOT/dotfiles/scripts/hypr-kill-tmux-window.sh" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/scripts/hypr-kill-tmux-window.sh" "$HOME/scripts/hypr-kill-tmux-window.sh"
-    chmod +x "$HOME/scripts/hypr-kill-tmux-window.sh"
-fi
-
-# Zoom meeting launcher
+# Simple zoom/project navigation script  
 if [[ -f "$REPO_ROOT/dotfiles/scripts/zoom.sh" ]]; then
     link_dotfile "$REPO_ROOT/dotfiles/scripts/zoom.sh" "$HOME/scripts/zoom.sh"
     chmod +x "$HOME/scripts/zoom.sh"
 fi
 
-# Also create symlinks in ~/.local/bin for system-wide access
+# Create symbolic links to make scripts available in PATH
 ensure_dir "$HOME/.local/bin"
 
-log "Creating system-wide script symlinks..."
-
-# Link to ~/.local/bin for PATH access
-if [[ -f "$HOME/scripts/switch_layout.sh" ]]; then
-    ln -sf "$HOME/scripts/switch_layout.sh" "$HOME/.local/bin/switch-layout"
-    info "Created symlink: switch-layout -> ~/.local/bin/"
-fi
-
+# Link scripts to .local/bin for PATH access
 if [[ -f "$HOME/scripts/zoxide_openfiles_nvim.sh" ]]; then
     ln -sf "$HOME/scripts/zoxide_openfiles_nvim.sh" "$HOME/.local/bin/nzo"
-    info "Created symlink: nzo -> ~/.local/bin/"
-fi
-
-if [[ -f "$HOME/scripts/hypr-kill-tmux-window.sh" ]]; then
-    ln -sf "$HOME/scripts/hypr-kill-tmux-window.sh" "$HOME/.local/bin/hypr-kill-tmux-window.sh"
-    info "Created symlink: hypr-kill-tmux-window.sh -> ~/.local/bin/"
+    info "Created symlink: nzo -> zoxide_openfiles_nvim.sh"
 fi
 
 if [[ -f "$HOME/scripts/zoom.sh" ]]; then
-    ln -sf "$HOME/scripts/zoom.sh" "$HOME/.local/bin/zoom"
-    info "Created symlink: zoom -> ~/.local/bin/"
-    
-    # Also create system-wide symlink if we have sudo access
-    if command -v sudo >/dev/null 2>&1; then
-        if sudo -n true 2>/dev/null; then
-            sudo ln -sf "$HOME/scripts/zoom.sh" "/usr/local/bin/zoom" 2>/dev/null || true
-            info "Created system-wide symlink: zoom -> /usr/local/bin/"
-        else
-            info "Note: Run 'sudo ln -sf \$HOME/scripts/zoom.sh /usr/local/bin/zoom' for system-wide access"
-        fi
-    fi
+    ln -sf "$HOME/scripts/zoom.sh" "$HOME/.local/bin/zoom-nav"
+    info "Created symlink: zoom-nav -> zoom.sh"
+fi
+
+# Add ~/.local/bin to PATH in shell config if not already present
+if [[ -f "$HOME/.zshrc" ]] && ! grep -q 'PATH.*\.local/bin' "$HOME/.zshrc"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+    info "Added ~/.local/bin to PATH in .zshrc"
 fi
 
 log "User scripts setup completed!"
-log "Available commands:"
-log "  switch-layout - Switch monitor layouts (Extended/Primary Only/Secondary Only)"
-log "  nzo [search] - Find and open files with Neovim using zoxide and fzf"
-log "  hypr-kill-tmux-window.sh - Intelligently kill Hyprland windows with tmux sessions"
-log "  zoom <shortcut> - Launch Zoom meetings in special workspace (570, 386, 296)" 
+log ""
+log "📁 Available Scripts:"
+if [[ -f "$HOME/scripts/zoxide_openfiles_nvim.sh" ]]; then
+    log "  nzo - Smart directory navigation with Neovim integration"
+fi
+if [[ -f "$HOME/scripts/zoom.sh" ]]; then
+    log "  zoom-nav - Quick project/directory navigation"
+fi
+log ""
+log "💡 macOS Display Management:"
+log "  • Use System Preferences > Displays for monitor configuration"
+log "  • Consider installing Rectangle for window management: brew install --cask rectangle"
+log "  • DisplayMenu is a great tool for quick display switching: brew install --cask displaymenu" 

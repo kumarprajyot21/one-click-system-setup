@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# One-Click System Setup
-# Handles both new system installation and new user setup
+# macOS One-Click Setup
+# Automated dotfiles and development environment setup for macOS
 
 set -euo pipefail
 
@@ -16,10 +16,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="$SCRIPT_DIR/setup.log"
-
-# Setup mode detection
-SETUP_MODE=""
-export SETUP_MODE
 
 # Logging function
 log() {
@@ -39,18 +35,10 @@ info() {
     echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$LOG_FILE"
 }
 
-# Detect distribution
-detect_distro() {
-    if [[ -f /etc/arch-release ]]; then
-        echo "arch"
-    elif [[ -f /etc/debian_version ]]; then
-        echo "debian"
-    elif [[ -f /etc/fedora-release ]]; then
-        echo "fedora"
-    elif [[ -f /etc/redhat-release ]]; then
-        echo "rhel"
-    else
-        echo "unknown"
+# Check if running on macOS
+check_macos() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        error "This script is designed for macOS only. For Linux, use the main branch."
     fi
 }
 
@@ -61,69 +49,12 @@ check_root() {
     fi
 }
 
-# Detect setup mode (new system vs new user)
-detect_setup_mode() {
-    local has_hyprland=false
-    local has_user_configs=false
-    
-    # Check if Hyprland is installed system-wide
-    if command -v hyprland >/dev/null 2>&1; then
-        has_hyprland=true
-    fi
-    
-    # Check if user already has dotfiles
-    if [[ -d "$HOME/.config" ]] && [[ $(ls -la "$HOME/.config" 2>/dev/null | wc -l) -gt 3 ]]; then
-        has_user_configs=true
-    fi
-    
-    if [[ "$has_hyprland" == true ]] && [[ "$has_user_configs" == true ]]; then
-        SETUP_MODE="update"
-        info "Detected: Existing system with user configurations (update mode)"
-    elif [[ "$has_hyprland" == true ]]; then
-        SETUP_MODE="new_user"
-        info "Detected: Existing system, new user setup"
-    else
-        SETUP_MODE="new_system"
-        info "Detected: New system installation required"
-    fi
-    export SETUP_MODE
-}
-
 # Create backup directory
 create_backup() {
     if [[ ! -d "$BACKUP_DIR" ]]; then
         mkdir -p "$BACKUP_DIR"
         log "Created backup directory: $BACKUP_DIR"
     fi
-}
-
-# Backup existing configuration
-backup_config() {
-    local config_path="$1"
-    local config_name="$(basename "$config_path")"
-    
-    if [[ -e "$config_path" ]]; then
-        cp -r "$config_path" "$BACKUP_DIR/$config_name" 2>/dev/null || true
-        info "Backed up $config_path to $BACKUP_DIR/$config_name"
-    fi
-}
-
-# Install system packages
-install_system_packages() {
-    local distro="$(detect_distro)"
-    log "Installing system packages for $distro..."
-    
-    case "$distro" in
-        "arch")
-            "$SCRIPT_DIR/modules/system/arch.sh"
-            ;;
-        "debian")
-            "$SCRIPT_DIR/modules/system/debian.sh"
-            ;;
-        *)
-            warning "Unsupported distribution: $distro. Skipping system package installation."
-            ;;
-    esac
 }
 
 # Setup user configurations
@@ -133,89 +64,149 @@ setup_user_configs() {
     # Create .config directory if it doesn't exist
     mkdir -p "$HOME/.config"
     
-    # Setup modules in order
+    # Setup modules in order for macOS
     local modules=(
-        "shell/zsh.sh"
-        "git/git.sh"
-        "tmux/tmux.sh"
-        "neovim/lazyvim.sh"
-        "hyprland/hyprland.sh"
-        "terminal/terminal.sh"
-        "scripts/user-scripts.sh"
-        "misc/misc.sh"
+        "homebrew/homebrew.sh"    # Install Homebrew and essential tools
+        "shell/zsh.sh"            # Zsh configuration with Oh My Zsh
+        "git/git.sh"              # Git configuration
+        "tmux/tmux.sh"            # tmux configuration and plugins
+        "neovim/lazyvim.sh"       # LazyVim (Neovim) setup
+        "terminal/terminal.sh"    # Ghostty terminal configuration
+        "scripts/user-scripts.sh" # User scripts and utilities
+        "misc/misc.sh"            # Miscellaneous configurations
     )
     
     for module in "${modules[@]}"; do
         if [[ -f "$SCRIPT_DIR/modules/$module" ]]; then
             log "Running module: $module"
-            bash "$SCRIPT_DIR/modules/$module"
+            bash "$SCRIPT_DIR/modules/$module" || warning "Module $module completed with warnings"
         else
             warning "Module not found: $module"
         fi
     done
 }
 
-# Setup display manager (requires sudo)
-setup_display_manager() {
-    if [[ "$SETUP_MODE" == "new_system" ]]; then
-        log "Setting up display manager..."
-        if [[ -f "$SCRIPT_DIR/modules/system/display-manager.sh" ]]; then
-            bash "$SCRIPT_DIR/modules/system/display-manager.sh"
-        fi
-    fi
+# Optional yabai window manager installation
+install_yabai() {
+    echo -e "\n${YELLOW}🪟 Window Manager Installation${NC}"
+    echo "Would you like to install yabai tiling window manager?"
+    echo "This provides automatic window tiling similar to Hyprland on Linux."
+    echo "Note: Requires Accessibility permissions and may need SIP configuration."
+    echo
+    
+    while true; do
+        read -p "Install yabai window manager? [y/N]: " install_wm
+        case "$install_wm" in
+            [Yy]*)
+                log "Starting yabai window manager installation..."
+                bash "$SCRIPT_DIR/modules/window-manager/yabai.sh"
+                break
+                ;;
+            [Nn]*|"")
+                info "Skipping yabai installation. You can run it later with:"
+                info "  bash $SCRIPT_DIR/modules/window-manager/yabai.sh"
+                break
+                ;;
+            *)
+                echo -e "${YELLOW}Please enter y or n${NC}"
+                ;;
+        esac
+    done
+}
+
+# Optional application installation
+install_applications() {
+    echo -e "\n${YELLOW}📱 Application Installation${NC}"
+    echo "Would you like to install applications using Homebrew?"
+    echo "This includes GUI apps like Cursor, Firefox, Obsidian, Rectangle, etc."
+    echo
+    
+    while true; do
+        read -p "Install applications? [y/N]: " install_apps
+        case "$install_apps" in
+            [Yy]*)
+                log "Starting application installation..."
+                bash "$SCRIPT_DIR/modules/applications/applications.sh"
+                break
+                ;;
+            [Nn]*|"")
+                info "Skipping application installation. You can run it later with:"
+                info "  bash $SCRIPT_DIR/modules/applications/applications.sh"
+                break
+                ;;
+            *)
+                echo -e "${YELLOW}Please enter y or n${NC}"
+                ;;
+        esac
+    done
+}
+
+# Show completion message with next steps
+show_completion_message() {
+    echo -e "\n${GREEN}🎉 macOS Setup Complete!${NC}"
+    echo
+    echo -e "${BLUE}What was installed:${NC}"
+    echo "  ✅ Homebrew package manager"
+    echo "  ✅ Essential CLI tools (eza, zoxide, fzf, ripgrep, etc.)"
+    echo "  ✅ Zsh with Oh My Zsh, plugins, and Starship prompt"
+    echo "  ✅ tmux with plugins and Catppuccin theme"
+    echo "  ✅ LazyVim (Neovim) configuration"
+    echo "  ✅ Ghostty terminal with optimized config"
+    echo "  ✅ Git configuration"
+    echo "  ✅ User scripts and utilities"
+    echo "  🪟 yabai window manager (optional)"
+    echo
+    echo -e "${YELLOW}📝 Next Steps:${NC}"
+    echo "  1. Restart your terminal or run: source ~/.zshrc"
+    echo "  2. Open Ghostty terminal for the best experience"
+    echo "  3. Start tmux with: tmux"
+    echo "  4. Open Neovim with: nvim (LazyVim will install plugins)"
+    echo "  5. Try modern CLI tools:"
+    echo "     • ls → eza"
+    echo "     • cd → z (zoxide)"
+    echo "     • cat → bat"
+    echo "     • find → fd"
+    echo "     • grep → rg (ripgrep)"
+    echo
+    echo -e "${CYAN}💡 Pro Tips:${NC}"
+    echo "  • Use 'p10k configure' to customize your Starship prompt"
+    echo "  • Press Ctrl+A in tmux (prefix key) for tmux commands"
+    echo "  • Use cmd+s as prefix in Ghostty for splits and tabs"
+    echo "  • yabai hotkeys use hyper key (cmd+ctrl+shift+alt) + hjkl for navigation"
+    echo "  • Run applications installer anytime: ./modules/applications/applications.sh"
+    echo "  • Run yabai installer anytime: ./modules/window-manager/yabai.sh"
+    echo
+    echo -e "${GREEN}Enjoy your new macOS development environment! 🚀${NC}"
 }
 
 # Main setup function
 main() {
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════╗"
-    echo "║       One-Click System Setup         ║"
+    echo "║       macOS One-Click Setup          ║"
+    echo "║   Development Environment Installer  ║"
     echo "╚══════════════════════════════════════╝"
     echo -e "${NC}"
     
+    check_macos
     check_root
-    detect_setup_mode
     create_backup
     
-    case "$SETUP_MODE" in
-        "new_system")
-            log "Starting new system setup..."
-            install_system_packages
-            setup_user_configs
-            setup_display_manager
-            ;;
-        "new_user")
-            log "Starting new user setup..."
-            setup_user_configs
-            ;;
-        "update")
-            log "Starting configuration update..."
-            setup_user_configs
-            ;;
-    esac
+    log "Starting macOS development environment setup..."
     
-    # Reload Hyprland configuration if running
-    if command -v hyprctl >/dev/null 2>&1 && pgrep -x Hyprland >/dev/null 2>&1; then
-        log "Reloading Hyprland configuration..."
-        hyprctl reload 2>/dev/null || warning "Failed to reload Hyprland configuration"
-    fi
+    # Main configuration setup
+    setup_user_configs
+    
+    # Optional yabai window manager installation
+    install_yabai
+    
+    # Optional application installation
+    install_applications
+    
+    # Show completion message
+    show_completion_message
     
     log "Setup completed successfully!"
-    echo -e "${GREEN}"
-    echo "╔══════════════════════════════════════╗"
-    echo "║           Setup Complete!            ║"
-    echo "║                                      ║"
-    echo "║  Your dotfiles have been installed.  ║"
-    echo "║  Backup created at:                  ║"
-    echo "║  $BACKUP_DIR"
-    echo "╚══════════════════════════════════════╝"
-    echo -e "${NC}"
-    
-    info "Log file: $LOG_FILE"
-    info "To apply changes, you may need to:"
-    echo "  - Restart your terminal"
-    echo "  - Log out and log back in"
-    echo "  - Reboot (for new system installations)"
 }
 
 # Run main function

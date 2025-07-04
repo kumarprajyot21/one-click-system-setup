@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Miscellaneous configurations
+# Miscellaneous configurations for macOS
 
 set -euo pipefail
 
@@ -8,191 +8,152 @@ source "$(dirname "$0")/../../scripts/utils.sh"
 
 log "Setting up miscellaneous configurations..."
 
-# Note: user-scripts.sh is already executed in the main setup flow
-
-# Link additional dotfiles that might not be handled by other modules
-if [[ -d "$REPO_ROOT/dotfiles/wofi" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/wofi" "$HOME/.config/wofi"
-fi
-if [[ -d "$REPO_ROOT/dotfiles/backgrounds" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/backgrounds" "$HOME/.config/backgrounds"
-fi
-if [[ -d "$REPO_ROOT/dotfiles/waybar" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/waybar" "$HOME/.config/waybar"
-fi
-
-# Create .local/bin directory for user scripts
-ensure_dir "$HOME/.local/bin"
-
-# Add user bin to PATH if not already there
-if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc" 2>/dev/null || true
-fi
-
-# Setup environment files
-ensure_dir "$REPO_ROOT/dotfiles/misc"
-
-# Create .profile if it doesn't exist
-if [[ ! -f "$REPO_ROOT/dotfiles/misc/.profile" ]]; then
-    cat > "$REPO_ROOT/dotfiles/misc/.profile" << 'EOF'
-# ~/.profile: executed by the command interpreter for login shells.
-
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/bin" ] ; then
-    PATH="$HOME/bin:$PATH"
-fi
-
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/.local/bin" ] ; then
-    PATH="$HOME/.local/bin:$PATH"
-fi
-
-# Environment variables
-export EDITOR=nvim
-export VISUAL=nvim
-export BROWSER=firefox
-export TERMINAL=kitty
-
-# Go environment
-export GOPATH="$HOME/go"
-export PATH="$GOPATH/bin:$PATH"
-
-# Rust environment
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Node.js environment
-export PATH="$HOME/.npm-global/bin:$PATH"
-
-# Python environment
-export PATH="$HOME/.local/bin:$PATH"
-EOF
-fi
-
-link_dotfile "$REPO_ROOT/dotfiles/misc/.profile" "$HOME/.profile"
-
-# Setup XDG directories
+# Create necessary directories
 ensure_dir "$HOME/.config"
-ensure_dir "$HOME/.local/share"
-ensure_dir "$HOME/.local/state"
-ensure_dir "$HOME/.cache"
+ensure_dir "$HOME/Pictures/Screenshots"
 
-# Create XDG user directories
-if command_exists xdg-user-dirs-update; then
-    xdg-user-dirs-update
+# Link other misc configurations if they exist
+if [[ -d "$REPO_ROOT/dotfiles/misc" ]]; then
+    for config in "$REPO_ROOT/dotfiles/misc"/*; do
+        if [[ -f "$config" ]]; then
+            local filename=$(basename "$config")
+            link_dotfile "$config" "$HOME/.config/$filename"
+        fi
+    done
 fi
 
-# Create common development directories
-ensure_dir "$HOME/Projects"
-ensure_dir "$HOME/Downloads"
-ensure_dir "$HOME/Documents"
-ensure_dir "$HOME/Pictures/screenshots"
-ensure_dir "$HOME/Pictures/wallpapers"
+# macOS-specific configurations
+log "Setting up macOS-specific configurations..."
 
-# Setup screenshot script
-cat > "$HOME/.local/bin/screenshot" << 'EOF'
-#!/bin/bash
-# Screenshot script for Hyprland
+# Create screenshot directory with proper permissions
+if [[ ! -d "$HOME/Pictures/Screenshots" ]]; then
+    mkdir -p "$HOME/Pictures/Screenshots"
+    info "Created screenshots directory: ~/Pictures/Screenshots"
+fi
 
-SCREENSHOT_DIR="$HOME/Pictures/screenshots"
-mkdir -p "$SCREENSHOT_DIR"
+# macOS screenshot helper function (can be added to shell functions)
+create_screenshot_functions() {
+    local functions_file="$HOME/.config/functions.zsh"
+    
+    cat > "$functions_file" << 'EOF'
+# macOS Screenshot Functions
+# Usage in terminal after sourcing this file
 
-case "$1" in
-    "area")
-        grim -g "$(slurp)" "$SCREENSHOT_DIR/screenshot-$(date +%Y%m%d-%H%M%S).png"
-        ;;
-    "window")
-        grim -g "$(hyprctl activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')" "$SCREENSHOT_DIR/screenshot-$(date +%Y%m%d-%H%M%S).png"
-        ;;
-    "full"|*)
-        grim "$SCREENSHOT_DIR/screenshot-$(date +%Y%m%d-%H%M%S).png"
-        ;;
-esac
+# Screenshot entire screen
+screenshot_full() {
+    local filename="$HOME/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png"
+    screencapture "$filename"
+    echo "Screenshot saved: $filename"
+}
+
+# Screenshot selected area
+screenshot_area() {
+    local filename="$HOME/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png"
+    screencapture -s "$filename"
+    echo "Screenshot saved: $filename"
+}
+
+# Screenshot specific window (interactive selection)
+screenshot_window() {
+    local filename="$HOME/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png"
+    screencapture -w "$filename"
+    echo "Screenshot saved: $filename"
+}
+
+# macOS system shortcuts (for reference):
+# Cmd+Shift+3: Full screen screenshot
+# Cmd+Shift+4: Select area screenshot  
+# Cmd+Shift+4+Space: Window screenshot
+# Cmd+Shift+5: Screenshot tool with options
 EOF
 
-chmod +x "$HOME/.local/bin/screenshot"
+    info "Created screenshot functions in ~/.config/functions.zsh"
+    info "Source it in your .zshrc with: source ~/.config/functions.zsh"
+}
 
-# Setup brightness control script
-cat > "$HOME/.local/bin/brightness" << 'EOF'
-#!/bin/bash
-# Brightness control script
+create_screenshot_functions
 
-case "$1" in
-    "up")
-        brightnessctl set +10%
-        ;;
-    "down")
-        brightnessctl set 10%-
-        ;;
-    *)
-        echo "Usage: brightness [up|down]"
-        echo "Current brightness: $(brightnessctl get)"
-        ;;
-esac
+# macOS system preferences helper
+create_system_helpers() {
+    local helpers_file="$HOME/.config/macos-helpers.zsh"
+    
+    cat > "$helpers_file" << 'EOF'
+# macOS System Helpers
+# Useful functions for macOS system management
+
+# Quick system preferences
+sys_prefs() {
+    case "$1" in
+        "displays"|"display")
+            open "/System/Library/PreferencePanes/Displays.prefPane"
+            ;;
+        "sound"|"audio")
+            open "/System/Library/PreferencePanes/Sound.prefPane"
+            ;;
+        "network")
+            open "/System/Library/PreferencePanes/Network.prefPane"
+            ;;
+        "bluetooth")
+            open "/System/Library/PreferencePanes/Bluetooth.prefPane"
+            ;;
+        "users")
+            open "/System/Library/PreferencePanes/Accounts.prefPane"
+            ;;
+        "security")
+            open "/System/Library/PreferencePanes/Security.prefPane"
+            ;;
+        *)
+            echo "Usage: sys_prefs [displays|sound|network|bluetooth|users|security]"
+            echo "Or just run: open '/System/Library/PreferencePanes/'"
+            ;;
+    esac
+}
+
+# Finder helpers
+finder_show_hidden() {
+    defaults write com.apple.finder AppleShowAllFiles YES
+    killall Finder
+    echo "Hidden files are now visible in Finder"
+}
+
+finder_hide_hidden() {
+    defaults write com.apple.finder AppleShowAllFiles NO
+    killall Finder
+    echo "Hidden files are now hidden in Finder"
+}
+
+# Dock helpers
+dock_autohide_on() {
+    defaults write com.apple.dock autohide -bool true
+    killall Dock
+    echo "Dock auto-hide enabled"
+}
+
+dock_autohide_off() {
+    defaults write com.apple.dock autohide -bool false
+    killall Dock
+    echo "Dock auto-hide disabled"
+}
 EOF
 
-chmod +x "$HOME/.local/bin/brightness"
+    info "Created system helpers in ~/.config/macos-helpers.zsh"
+    info "Source it in your .zshrc with: source ~/.config/macos-helpers.zsh"
+}
 
-# Setup volume control script
-cat > "$HOME/.local/bin/volume" << 'EOF'
-#!/bin/bash
-# Volume control script
-
-case "$1" in
-    "up")
-        pamixer -i 5
-        ;;
-    "down")
-        pamixer -d 5
-        ;;
-    "mute")
-        pamixer --toggle-mute
-        ;;
-    *)
-        echo "Usage: volume [up|down|mute]"
-        echo "Current volume: $(pamixer --get-volume)%"
-        echo "Muted: $(pamixer --get-mute)"
-        ;;
-esac
-EOF
-
-chmod +x "$HOME/.local/bin/volume"
-
-# Setup power menu script
-cat > "$HOME/.local/bin/powermenu" << 'EOF'
-#!/bin/bash
-# Power menu script
-
-options="Lock\nLogout\nReboot\nShutdown"
-
-chosen=$(echo -e "$options" | wofi --dmenu --prompt "Power Menu" --width 200 --height 150)
-
-case $chosen in
-    "Lock")
-        swaylock -f -c 000000
-        ;;
-    "Logout")
-        hyprctl dispatch exit
-        ;;
-    "Reboot")
-        systemctl reboot
-        ;;
-    "Shutdown")
-        systemctl poweroff
-        ;;
-esac
-EOF
-
-chmod +x "$HOME/.local/bin/powermenu"
-
-# Setup application launcher enhancement
-cat > "$HOME/.local/bin/launcher" << 'EOF'
-#!/bin/bash
-# Enhanced application launcher
-
-wofi --show drun --width 600 --height 400 --prompt "Applications"
-EOF
-
-chmod +x "$HOME/.local/bin/launcher"
+create_system_helpers
 
 log "Miscellaneous setup completed!"
-log "Created utility scripts in ~/.local/bin/" 
+log ""
+log "📋 Created helper functions:"
+log "  • Screenshot functions: ~/.config/functions.zsh"
+log "  • System helpers: ~/.config/macos-helpers.zsh"
+log ""
+log "💡 To use these functions, add to your ~/.zshrc:"
+log "  source ~/.config/functions.zsh"
+log "  source ~/.config/macos-helpers.zsh"
+log ""
+log "🖼️  macOS Screenshot Shortcuts:"
+log "  • Cmd+Shift+3: Full screen"
+log "  • Cmd+Shift+4: Select area"
+log "  • Cmd+Shift+4+Space: Window"
+log "  • Cmd+Shift+5: Screenshot tool" 

@@ -1,37 +1,17 @@
-#!/bin/bash
-
-# Ghostty terminal configuration for macOS
-
-set -euo pipefail
-
-source "$(dirname "$0")/../../scripts/utils.sh"
-
-log "Setting up Ghostty terminal configuration..."
-
-# Ensure Ghostty config directory exists
-ensure_dir "$HOME/.config/ghostty"
-
-# Create Ghostty configuration
-if [[ -f "$REPO_ROOT/dotfiles/terminal/ghostty-config" ]]; then
-    link_dotfile "$REPO_ROOT/dotfiles/terminal/ghostty-config" "$HOME/.config/ghostty/config"
-else
-    # Create a comprehensive Ghostty config
-    ensure_dir "$REPO_ROOT/dotfiles/terminal"
-    
-    cat > "$REPO_ROOT/dotfiles/terminal/ghostty-config" << 'EOF'
 # Ghostty Terminal Configuration for macOS
 
 # Font configuration
 font-family = MesloLGS Nerd Font Mono
-font-size = 16
+font-size = 14
 
 # Window appearance
 background-opacity = 0.90
-theme = Catppuccin Mocha
+theme = "catppuccin-mocha"
 window-padding-x = 10
 window-padding-y = 10
 window-width = 120
 window-height = 30
+background-blur = true
 
 # macOS specific settings
 macos-titlebar-style = transparent
@@ -49,6 +29,9 @@ clipboard-write = allow
 term = xterm-256color
 shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
+
+# Auto-start tmux (attach to existing session or create new one)
+command = /opt/homebrew/bin/tmux new-session -A -s main
 
 # Key bindings (using cmd+s as prefix like tmux style)
 keybind = cmd+s>r=reload_config
@@ -78,16 +61,3 @@ keybind = cmd+s>e=equalize_splits
 # Auto-update
 auto-update = check
 auto-update-channel = stable
-EOF
-    
-    link_dotfile "$REPO_ROOT/dotfiles/terminal/ghostty-config" "$HOME/.config/ghostty/config"
-fi
-
-log "Ghostty terminal setup completed!"
-log ""
-log "🚀 Ghostty Setup Complete!"
-log "Next steps:"
-log "  • Install Ghostty: ${BLUE}brew install --cask ghostty${NC}"
-log "  • Install Nerd Font: ${BLUE}brew install font-meslo-lg-nerd-font${NC}"
-log "  • Launch Ghostty and enjoy your new terminal!"
-log "  • Use cmd+s as prefix for splits and tabs (like tmux)" 
