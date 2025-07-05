@@ -27,7 +27,7 @@ key="$1"
 show_usage() {
     echo "📱 macOS Zoom Meeting Launcher"
     echo ""
-    echo "Usage: zoom-meeting <shortcut>"
+    echo "Usage: zoom <shortcut>   (or zoom-meeting <shortcut>)"
     echo ""
     echo "Available shortcuts:"
     for k in $(get_meeting_keys); do
@@ -39,8 +39,8 @@ show_usage() {
     echo "  --help              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  zoom-meeting 570                    # Launch meeting 570 in Zoom app"
-    echo "  zoom-meeting list                   # List all meetings"
+    echo "  zoom 570                            # Launch meeting 570 in Zoom app"
+    echo "  zoom list                           # List all meetings"
     echo ""
     echo "ℹ️  This script launches meetings directly in the Zoom app (no browser required)"
 }
