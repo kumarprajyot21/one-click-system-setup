@@ -26,6 +26,12 @@ if [[ -f "$REPO_ROOT/dotfiles/scripts/zoom.sh" ]]; then
     chmod +x "$HOME/scripts/zoom.sh"
 fi
 
+# Zoom meeting launcher script
+if [[ -f "$REPO_ROOT/dotfiles/scripts/zoom-meeting.sh" ]]; then
+    link_dotfile "$REPO_ROOT/dotfiles/scripts/zoom-meeting.sh" "$HOME/scripts/zoom-meeting.sh"
+    chmod +x "$HOME/scripts/zoom-meeting.sh"
+fi
+
 # Create symbolic links to make scripts available in PATH
 ensure_dir "$HOME/.local/bin"
 
@@ -38,6 +44,11 @@ fi
 if [[ -f "$HOME/scripts/zoom.sh" ]]; then
     ln -sf "$HOME/scripts/zoom.sh" "$HOME/.local/bin/zoom-nav"
     info "Created symlink: zoom-nav -> zoom.sh"
+fi
+
+if [[ -f "$HOME/scripts/zoom-meeting.sh" ]]; then
+    ln -sf "$HOME/scripts/zoom-meeting.sh" "$HOME/.local/bin/zoom-meeting"
+    info "Created symlink: zoom-meeting -> zoom-meeting.sh"
 fi
 
 # Add ~/.local/bin to PATH in shell config if not already present
@@ -54,6 +65,9 @@ if [[ -f "$HOME/scripts/zoxide_openfiles_nvim.sh" ]]; then
 fi
 if [[ -f "$HOME/scripts/zoom.sh" ]]; then
     log "  zoom-nav - Quick project/directory navigation"
+fi
+if [[ -f "$HOME/scripts/zoom-meeting.sh" ]]; then
+    log "  zoom-meeting - Launch Zoom meetings from shortcuts"
 fi
 log ""
 log "💡 macOS Display Management:"

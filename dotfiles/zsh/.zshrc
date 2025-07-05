@@ -195,6 +195,9 @@ eval "$(zoxide init zsh)"
 # zoxide (called from ~/scripts/)
 alias nzo="~/scripts/zoxide_openfiles_nvim.sh"
 
+# Zoom meeting launcher
+alias zoom="zoom-meeting"
+
 # Next level of an ls 
 # options :  --no-filesize --no-time --no-permissions 
 alias ls="eza --no-filesize --long --color=always --icons=always --no-user"
